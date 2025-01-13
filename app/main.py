@@ -1,6 +1,5 @@
 from fastapi import FastAPI, Response, status, HTTPException
 from fastapi.params import Body
-from pydantic import BaseModel
 from typing import Optional
 from app.dbconnect import dbConnection      # Logic to make connection with the database
 from app.data import posts                  # Import Posts
@@ -9,13 +8,10 @@ from app.utils import find_post_by_id       # Finds Posts
 from app.utils import update_post_by_id     # Update Posts
 
 
+from app.pyModels import Post, User
 
 app = FastAPI()
 
-class Post(BaseModel):
-    title: str
-    content: str
-    published: bool = False
 
 
 connection, cursor = dbConnection() # this connects with the database and returns the connection and cursor varaible.
@@ -62,3 +58,21 @@ async def update_post(id: int, respose: Response, new_data: Post):
     if not updated_post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post doesnt exist")
     return {"Response" : updated_post}
+
+
+# Creates a user
+@app.post("/user/create")
+async def create_user(user: User):
+    cursor.execute(""" INSERT INTO users (email, password) VALUES (%s, %s) RETURNING *; """, (user.email, user.password))
+    new_user = cursor.fetchone()
+    connection.commit()
+    return {"new_user": new_user}
+
+
+#Gets all users
+
+@app.get("/users")
+async def get_users():
+    cursor.execute(""" SELECT * FROM users""")
+    all_users = cursor.fetchall()
+    return {"all_users": all_users}
